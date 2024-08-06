@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx"
 
 	"github.com/claraferraz/ask-me-anything/internal/store/pgstore"
 )
@@ -255,6 +257,11 @@ func (h apiHandler) handleGetRoomMessages(w http.ResponseWriter, r *http.Request
 	SendJSON(w, messages)
 }
 func (h apiHandler) handleGetRoomMessage(w http.ResponseWriter, r *http.Request) {
+	_, _, _, ok := h.ReadRoom(w, r)
+	if !ok {
+		return
+	}
+
 	rawMessageID := chi.URLParam(r, "message_id")
 	messageID, err := uuid.Parse(rawMessageID)
 	if err != nil {
@@ -264,6 +271,10 @@ func (h apiHandler) handleGetRoomMessage(w http.ResponseWriter, r *http.Request)
 
 	message, err := h.q.GetMessage(r.Context(), messageID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "message not found", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		slog.Error("failed to get this message", "error", err)
 		return
