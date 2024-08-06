@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
 	"github.com/claraferraz/ask-me-anything/internal/store/pgstore"
@@ -254,6 +255,22 @@ func (h apiHandler) handleGetRoomMessages(w http.ResponseWriter, r *http.Request
 	SendJSON(w, messages)
 }
 func (h apiHandler) handleGetRoomMessage(w http.ResponseWriter, r *http.Request) {
+	rawMessageID := chi.URLParam(r, "message_id")
+	messageID, err := uuid.Parse(rawMessageID)
+	if err != nil {
+		http.Error(w, "invalid Message id", http.StatusBadRequest)
+		return
+	}
+
+	message, err := h.q.GetMessage(r.Context(), messageID)
+	if err != nil {
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		slog.Error("failed to get this message", "error", err)
+		return
+	}
+
+	SendJSON(w, message)
+
 }
 func (h apiHandler) handleReactToMessage(w http.ResponseWriter, r *http.Request) {
 }

@@ -16,11 +16,11 @@ SELECT
     "id", "room_id", "message", "reaction_count", "answered"
 FROM messages
 WHERE
-    room_id = $1
+    id = $1
 `
 
-func (q *Queries) GetMessage(ctx context.Context, roomID uuid.UUID) (Message, error) {
-	row := q.db.QueryRow(ctx, getMessage, roomID)
+func (q *Queries) GetMessage(ctx context.Context, id uuid.UUID) (Message, error) {
+	row := q.db.QueryRow(ctx, getMessage, id)
 	var i Message
 	err := row.Scan(
 		&i.ID,
